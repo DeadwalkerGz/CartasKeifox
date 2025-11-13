@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CartasKeifox – Modo Offline</title>
+
+    <!-- Estilos globales del proyecto -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Estilos específicos del modo Offline -->
+    <link rel="stylesheet" href="css/offline.css">
+</head>
+
+<body>
+
+    <!-- HEADER: volver al menú -->
+    <header class="top-bar">
+        <button class="back-button" onclick="location.href='index.html'">← Volver</button>
+        <h1 class="mode-title">Modo Offline</h1>
+    </header>
+
+    <!-- CONTENEDOR GENERAL -->
+    <main class="offline-container">
+
+        <!-- Panel izquierdo: Información -->
+        <section class="offline-panel offline-info">
+            <h2 class="panel-title">Minijuego: Carta más alta</h2>
+
+            <p class="panel-text">
+                Tú y KeifoBox roban una carta del 1 al 10.<br>
+                La carta más alta gana la ronda.<br>
+                Quien gane <strong>3 rondas</strong> primero, gana la partida.
+            </p>
+
+            <!-- Marcador -->
+            <div class="scoreboard">
+
+                <div class="score-card">
+                    <h3>Tú</h3>
+                    <p id="player-score" class="score">0</p>
+                </div>
+
+                <div class="score-card">
+                    <h3>KeifoBox</h3>
+                    <p id="cpu-score" class="score">0</p>
+                </div>
+
+                <div class="score-card">
+                    <h3>Ronda</h3>
+                    <p id="round-number" class="score">1</p>
+                </div>
+
+            </div>
+
+            <!-- Acciones -->
+            <div class="actions">
+                <button id="btn-play-round" class="btn-primary">Jugar ronda</button>
+                <button id="btn-reset" class="btn-secondary">Reiniciar</button>
+            </div>
+
+            <!-- Mensajes -->
+            <p id="status-message" class="status-msg">
+                Presiona “Jugar ronda” para empezar.
+            </p>
+        </section>
+
+        <!-- Panel derecho: Canvas -->
+        <section class="offline-panel offline-canvas">
+            <canvas id="gameCanvas"></canvas>
+        </section>
+
+    </main>
+
+    <!-- SCRIPT DEL MINIJUEGO -->
+    <script src="js/offline.js"></script>
+
+</body>
+</html>

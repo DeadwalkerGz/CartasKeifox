@@ -1,0 +1,173 @@
+/* ===== Fondo ===== */
+body {
+    background-image: url('../img/fondo-keifox.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== HEADER ===== */
+.top-bar {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+.back-button {
+    background: rgba(255, 255, 255, 0.85);
+    border: 0;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s ease;
+    box-shadow: 0 2px 7px rgba(0,0,0,0.2);
+}
+
+.back-button:hover {
+    transform: translateY(-2px);
+    background: #ffeede;
+}
+
+.mode-title {
+    flex: 1;
+    text-align: center;
+    color: #6b4935;
+    font-size: 20px;
+}
+
+/* ===== LAYOUT ===== */
+.offline-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+    padding: 20px;
+}
+
+/* Paneles generales */
+.offline-panel {
+    background: rgba(255, 248, 239, 0.92);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+
+/* ===== PANEL IZQUIERDO ===== */
+.panel-title {
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #6b4935;
+}
+
+.panel-text {
+    color: #7a5a43;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+/* Marcador */
+.scoreboard {
+    margin-top: 14px;
+    display: flex;
+    gap: 14px;
+}
+
+.score-card {
+    flex: 1;
+    padding: 10px;
+    background: #fff5ea;
+    border-radius: 14px;
+    text-align: center;
+    box-shadow: 0 3px 7px rgba(0,0,0,0.1);
+}
+
+.score-card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #6f4b38;
+}
+
+.score {
+    font-size: 24px;
+    margin-top: 6px;
+    font-weight: bold;
+    color: #6b4935;
+}
+
+/* Botones */
+.actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: 0.25s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #f2a766, #f27f3e);
+    color: #fff;
+}
+
+.btn-secondary {
+    background: #fff5ea;
+    color: #7b5234;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+    transform: translateY(-2px);
+}
+
+/* Mensaje */
+.status-msg {
+    margin-top: 16px;
+    padding: 10px;
+    background: #fff5ea;
+    border-radius: 12px;
+    border: 1px dashed #d7b89a;
+    font-size: 15px;
+    color: #6b4935;
+    white-space: pre-line;
+}
+
+/* ===== CANVAS PANEL ===== */
+.offline-canvas {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 780px) {
+    .offline-container {
+        grid-template-columns: 1fr;
+    }
+
+    .offline-canvas {
+        order: -1;
+        margin-bottom: 10px;
+    }
+}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CartasKeifox – Inicio</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url('img/fondo-keifox.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            font-family: "Poppins", sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        /* ====== LOGO CARTASKEIFOX ====== */
+        .logo-wrapper {
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .logo-cartas {
+            width: 380px;          /* ajusta si lo quieres más grande/pequeño */
+            max-width: 80vw;
+            user-select: none;
+            -webkit-user-drag: none;
+            transform-origin: center bottom;
+            animation: logoFloat 4.5s ease-in-out infinite;
+            filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.18));
+        }
+
+        /* Al pasar el mouse, un poquito más de vida */
+        .logo-wrapper:hover .logo-cartas {
+            animation-duration: 3.2s;
+            transform: scale(1.02);
+            filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.22));
+        }
+
+        @keyframes logoFloat {
+            0% {
+                transform: translateY(0px) rotate(-1deg);
+            }
+            25% {
+                transform: translateY(-6px) rotate(1deg);
+            }
+            50% {
+                transform: translateY(0px) rotate(0deg);
+            }
+            75% {
+                transform: translateY(-4px) rotate(-1deg);
+            }
+            100% {
+                transform: translateY(0px) rotate(-1deg);
+            }
+        }
+
+        /* ====== MENÚ PRINCIPAL ====== */
+        .menu {
+            display: flex;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .menu-option {
+            width: 230px;
+            cursor: pointer;
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+
+        .menu-option:hover {
+            transform: translateY(-6px);
+            filter: drop-shadow(0 6px 8px rgba(0,0,0,0.25));
+        }
+
+        .icon {
+            width: 100%;
+            user-select: none;
+            -webkit-user-drag: none;
+            transform-origin: top center;
+            animation: balanceo 3.5s ease-in-out infinite;
+        }
+
+        .offline {
+            animation: balanceo 3.5s ease-in-out infinite;
+        }
+
+        .uno {
+            animation: balanceo 3.5s ease-in-out infinite;
+        }
+
+        .multi {
+            animation: balanceo 3.5s ease-in-out infinite;
+        }
+
+        @keyframes balanceo {
+            0%   { transform: rotate(1deg); }
+            50%  { transform: rotate(-1deg); }
+            100% { transform: rotate(1deg); }
+        }
+
+        /* Un poco de responsivo para pantallas pequeñas */
+        @media (max-width: 800px) {
+            .menu {
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+                margin-top: 24px;
+            }
+
+            .menu-option {
+                width: 260px;
+            }
+
+            .logo-cartas {
+                width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGO ANIMADO CARTASKEIFOX -->
+    <div class="logo-wrapper">
+        <img src="img/CartasKeifox_logo.png" class="logo-cartas" alt="CartasKeifox logo">
+    </div>
+
+    <!-- MENÚ DE MODOS DE JUEGO -->
+    <div class="menu">
+
+        <!-- Botón Offline -->
+        <div class="menu-option" onclick="location.href='offline.html'">
+            <img src="img/offline.png" class="icon offline" alt="Offline">
+        </div>
+
+        <!-- Botón 1 vs 1 -->
+        <div class="menu-option" onclick="location.href='uno_vs_uno.html'">
+            <!-- Si tu archivo se llama distinto (por ejemplo 1vs1_final.png) cambia aquí -->
+            <img src="img/uno_vs_uno.png" class="icon uno" alt="1 vs 1">
+        </div>
+
+        <!-- Botón Multiplayer -->
+        <div class="menu-option" onclick="location.href='multiplayer.html'">
+            <img src="img/multiplayer.png" class="icon multi" alt="Multiplayer">
+        </div>
+
+    </div>
+
+</body>
+</html>

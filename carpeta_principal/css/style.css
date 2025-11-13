@@ -1,0 +1,59 @@
+.menu {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    margin-top: 40px;
+}
+
+/* Contenedor de cada opción */
+.menu-option {
+    width: 230px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+/* Hover suave */
+.menu-option:hover {
+    transform: translateY(-6px);
+}
+
+/* Imagen estilo marco con animalito */
+.icon {
+    width: 100%;
+    user-select: none;
+    -webkit-user-drag: none;
+
+    /* Animación de balanceo */
+    animation: balanceo 3.5s ease-in-out infinite;
+    transform-origin: top center;
+}
+
+/* Animación de parpadeo en cada personaje */
+.offline {
+    animation: balanceo 3.5s ease-in-out infinite,
+               parpadeo 6s infinite;
+}
+
+.uno {
+    animation: balanceo 3.5s ease-in-out infinite,
+               parpadeo 5.5s infinite;
+}
+
+.multi {
+    animation: balanceo 3.5s ease-in-out infinite,
+               parpadeo 7s infinite;
+}
+
+
+/* Balanceo colgado */
+@keyframes balanceo {
+    0%   { transform: rotate(1deg); }
+    50%  { transform: rotate(-1deg); }
+    100% { transform: rotate(1deg); }
+}
+
+/* Parpadeo */
+@keyframes parpadeo {
+    0%, 92%, 100% { filter: brightness(1); }
+    93%, 95%     { filter: brightness(0.6); } /* simula cerrar ojos */
+}
