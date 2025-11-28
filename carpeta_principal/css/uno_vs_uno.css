@@ -83,3 +83,21 @@
     height: 100%;
     object-fit: contain;
 }
+/* Jugador con el turno actual */
+.jugador.turno-actual {
+    border: 3px solid gold;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+    transform: scale(1.03);
+    transition: 0.25s ease;
+}
+#contador-baraja {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #222;
+    background: rgba(255,255,255,0.7);
+    padding: 6px 12px;
+    display: inline-block;
+    border-radius: 8px;
+}

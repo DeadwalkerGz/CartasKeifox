@@ -70,8 +70,9 @@ class MesaDeJuego {
     repartir() {
         for (let j of this.jugadores) {
             j.mano = this.baraja.splice(0, 3);
-            j.cantosDisponibles = this.detectarCantos(j.mano);
-            j.cantosOriginales = { ...j.cantosDisponibles }; // NUEVO
+            j.cantosDisponibles = null;
+            j.cantosOriginales = null;
+            this.actualizarCantosJugador(j);
         }
     }
 
@@ -107,6 +108,7 @@ class MesaDeJuego {
     }
 
     jugarCarta(idJugador, indiceCarta) {
+
         if (idJugador !== this.turnoActual) {
             return { ok: false, motivo: "No es tu turno" };
         }
@@ -117,18 +119,18 @@ class MesaDeJuego {
             return { ok: false, motivo: "Carta inválida" };
         }
 
-        // Sacar carta de la mano
+        // 1. Sacar carta
         const carta = jugador.mano.splice(indiceCarta, 1)[0];
 
+        // 2. Detectar caída
         const caida = this.detectarCaida(carta);
-        let puntosGanados = 0;
-
         if (caida) {
-            puntosGanados = this.aplicarCaida(idJugador, carta, caida.index);
+            let puntosGanados = this.aplicarCaida(idJugador, carta, caida.indices);
 
-            // 🔥 ROBAR CARTA TAMBIÉN EN CAÍDA
+            // Robar carta
             if (this.baraja.length > 0) {
                 jugador.mano.push(this.baraja.shift());
+                this.actualizarCantosJugador(jugador);
             }
 
             this.avanzarTurno();
@@ -142,15 +144,42 @@ class MesaDeJuego {
             };
         }
 
-        // Si no hay caída → colocar carta en la mesa
+        // 3. NO hubo caída → poner la carta EN LA MESA
         this.mesa.push(carta);
 
-        // 🔥 ROBAR UNA CARTA SI TODAVÍA QUEDAN EN LA BARAJA
-        if (this.baraja.length > 0) {
-            jugador.mano.push(this.baraja.shift());
+        // 4. Revisar escalera DESPUÉS de poner la carta
+        const escalera = this.detectarEscaleraMesa();
+        if (escalera) {
+
+            // Puntos por escalera (ajústalo tú)
+            jugador.puntos += 3;
+
+            // Limpiar mesa
+            this.mesa = [];
+
+            // Robar carta
+            if (this.baraja.length > 0) {
+                jugador.mano.push(this.baraja.shift());
+                this.actualizarCantosJugador(jugador);
+            }
+
+            this.avanzarTurno();
+
+            return {
+                ok: true,
+                tipo: "escalera",
+                puntos: 3,
+                mesa: []
+            };
         }
 
-        // Pasar turno
+        // 5. Robar carta normal
+        if (this.baraja.length > 0) {
+            jugador.mano.push(this.baraja.shift());
+            this.actualizarCantosJugador(jugador);
+        }
+
+        // 6. Pasar turno
         this.avanzarTurno();
 
         return {
@@ -159,8 +188,8 @@ class MesaDeJuego {
             carta,
             mesa: [...this.mesa]
         };
-
     }
+
 
     // Detectar todos los cantos posibles en una mano de 3 cartas
     detectarCantos(mano) {
@@ -228,6 +257,41 @@ class MesaDeJuego {
 
         return cantos;
     }
+
+    // Recalcula los cantos de un jugador SIN permitir recantar lo ya usado
+    actualizarCantosJugador(jugador) {
+        if (!jugador) return;
+
+        // Detectar cantos con la mano actual
+        const nuevos = this.detectarCantos(jugador.mano);
+
+        // Si nunca tuvo cantosDisponibles, simplemente los asignamos
+        if (!jugador.cantosDisponibles) {
+            jugador.cantosDisponibles = { ...nuevos };
+        } else {
+            // Si ya existían, respetamos los que ya fueron cantados (false)
+            for (let tipo in nuevos) {
+                if (jugador.cantosDisponibles[tipo] === false) {
+                    // Ya lo cantó antes: NO se reactiva, aunque la mano lo permita
+                    continue;
+                }
+                jugador.cantosDisponibles[tipo] = nuevos[tipo];
+            }
+        }
+
+        // Actualizar cantosOriginales:
+        // representa los cantos que HA TENIDO en algún momento con esta mano
+        if (!jugador.cantosOriginales) {
+            jugador.cantosOriginales = { ...nuevos };
+        } else {
+            for (let tipo in nuevos) {
+                if (nuevos[tipo]) {
+                    jugador.cantosOriginales[tipo] = true;
+                }
+            }
+        }
+    }
+
     // El jugador intenta cantar un canto
     cantar(idJugador, tipoCanto) {
         const jugador = this.jugadores[idJugador];
@@ -287,43 +351,83 @@ class MesaDeJuego {
 
     // Detectar si hay caída en cualquier parte de la mesa
     detectarCaida(cartaJug) {
-        if (this.mesa.length === 0) return null;
+        // Buscar todas las cartas con el mismo valor
+        const indices = [];
 
-        // Buscar coincidencias por valor
-        const index = this.mesa.findIndex(c => c.valor === cartaJug.valor);
+        for (let i = 0; i < this.mesa.length; i++) {
+            if (this.mesa[i].valor === cartaJug.valor) {
+                indices.push(i);
+            }
+        }
 
-        if (index !== -1) {
-            return { index, cartaMesa: this.mesa[index] };
+        if (indices.length === 0) return null;
+
+        return { indices };
+    }
+
+    // Aplicar caída: recoger cartas y calcular puntos
+    aplicarCaida(idJugador, cartaJug, indices) {
+        const jugador = this.jugadores[idJugador];
+
+        // Tomar las cartas exactas que coincidieron
+        const recogidas = indices.map(i => this.mesa[i]);
+
+        // Eliminar de la mesa las cartas recogidas SIN romper el orden
+        this.mesa = this.mesa.filter((_, idx) => !indices.includes(idx));
+
+        // Añadir tu carta a las recogidas
+        recogidas.push(cartaJug);
+
+        // Guardar todo en el jugador
+        jugador.cartasRecogidas.push(...recogidas);
+
+        // ============================
+        // PUNTOS (misma regla anterior)
+        // ============================
+        let puntos = 0;
+
+        if (cartaJug.valor >= 1 && cartaJug.valor <= 7) puntos += 1;
+        else if (cartaJug.valor === 10) puntos += 2;
+        else if (cartaJug.valor === 11) puntos += 3;
+        else if (cartaJug.valor === 12) puntos += 4;
+
+        // BONUS de mesa limpia
+        if (this.mesa.length === 0) {
+            puntos += 4;
+        }
+
+        jugador.puntos += puntos;
+
+        return puntos;
+    }
+
+    detectarEscaleraMesa() {
+        if (this.mesa.length < 3) return null;
+
+        const valores = this.mesa.map(c => c.valor).sort((a, b) => a - b);
+
+        // Buscar secuencias consecutivas (5-6-7 o 10-11-12, etc)
+        let secuencia = [];
+
+        for (let i = 0; i < valores.length; i++) {
+            if (secuencia.length === 0) {
+                secuencia.push(valores[i]);
+            } else {
+                const ultimo = secuencia[secuencia.length - 1];
+                if (valores[i] === ultimo + 1) {
+                    secuencia.push(valores[i]);
+                } else {
+                    secuencia = [valores[i]];
+                }
+            }
+
+            if (secuencia.length >= 3) {
+                return secuencia; // 🎯 hay escalera
+            }
         }
 
         return null;
     }
-    // Aplicar caída: recoger cartas y calcular puntos
-    aplicarCaida(idJugador, cartaJug, indexCaida) {
-        const jugador = this.jugadores[idJugador];
-
-        // Cartas que se recogen desde esa posición hasta el final
-        const recogidas = this.mesa.splice(indexCaida);
-
-        // Guardarlas para el jugador
-        jugador.cartasRecogidas.push(...recogidas, cartaJug);
-
-        // PUNTOS por caída según valor:
-        let puntos = 0;
-        if (cartaJug.valor >= 1 && cartaJug.valor <= 7) puntos = 1;
-        else if (cartaJug.valor === 10) puntos = 2;
-        else if (cartaJug.valor === 11) puntos = 3;
-        else if (cartaJug.valor === 12) puntos = 4;
-
-        // Mesa limpia
-        if (this.mesa.length === 0) {
-            puntos += 4; // total = 5
-        }
-
-        jugador.puntos += puntos;
-        return puntos;
-    }
-
 
     // Verifica si ya se acabaron las manos y la ronda puede finalizarse manualmente
     verificarFinDeRonda() {

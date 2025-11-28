@@ -10,10 +10,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const mesa = new MesaDeJuego();
     window.mesa = mesa;   // 🔥 AGREGA ESTO AQUÍ
     // ===== ELEMENTOS DEL DOM =====
+
     const mesaEl = document.getElementById("mesa");
     const jugadoresEl = document.getElementById("jugadores");
     const cantosPanel = document.getElementById("panel-cantos");
     const cantosLista = document.getElementById("cantos-lista");
+    const contadorBarajaEl = document.getElementById("contador-baraja");
+
 
     // ====== RENDER MESA ======
     function renderMesa() {
@@ -34,6 +37,11 @@ document.addEventListener("DOMContentLoaded", () => {
         mesa.jugadores.forEach((jugador, idJ) => {
             const box = document.createElement("div");
             box.classList.add("jugador");
+
+            if (idJ === mesa.turnoActual) {
+                box.classList.add("turno-actual"); // 🔥 RESALTAR JUGADOR EN TURNO
+            }
+
 
             box.innerHTML = `
                 <h3>${jugador.nombre} — Puntos: ${jugador.puntos}</h3>
@@ -86,7 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
             cantosLista.appendChild(b);
         });
     }
-
+    function renderBaraja() {
+        contadorBarajaEl.textContent = `Cartas en el mazo: ${mesa.baraja.length}`;
+    }
+    
     // ====== ACCIÓN: CANTAR ======
     function cantar(idJugador, tipo) {
         const res = mesa.cantar(idJugador, tipo);
@@ -110,9 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mesa.verificarFinDeRonda()) {
             console.log("FIN DE RONDA:", mesa.finalizarRonda());
 
-            // 🔥 AUTO COMENZAR SIGUIENTE RONDA
-            const nueva = mesa.nuevaRonda();
-            console.log("NUEVA RONDA:", nueva);
+            // ❌ YA NO INICIAR NUEVA RONDA AUTOMÁTICAMENTE
+            // 🔥 Ahora la lógica permanece estable y no se rompe el flujo
         }
 
         // fin de partida
@@ -125,12 +135,50 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+
     // ====== RENDER GLOBAL ======
     function renderTodo() {
         renderMesa();
         renderJugadores();
         renderCantos();
+        renderBaraja();
+        renderDebug();
     }
+    function renderDebug() {
+    const out = document.getElementById("debug-output");
+
+    const data = {
+        turnoActual: mesa.turnoActual,
+        estado: mesa.estado,
+        repartidor: mesa.repartidor,
+        barajaRestante: mesa.baraja.length,
+
+        mesaValores: mesa.mesa.map(c => ({
+            palo: c.palo,
+            valor: c.valor,
+            img: c.imagen
+        })),
+
+        jugadores: mesa.jugadores.map(j => ({
+            id: j.id,
+            nombre: j.nombre,
+            puntos: j.puntos,
+            mano: j.mano.map(c => ({
+                palo: c.palo,
+                valor: c.valor,
+                img: c.imagen
+            })),
+            cantosDisponibles: j.cantosDisponibles,
+            cantosOriginales: j.cantosOriginales,
+            recogidas: j.cartasRecogidas.length
+        })),
+
+        ultimaJugada: window._ultimaJugada || null
+    };
+
+    out.textContent = JSON.stringify(data, null, 2);
+}
+
 
     // ====== INICIAR PARTIDA ======
     mesa.iniciarPartida(2);
