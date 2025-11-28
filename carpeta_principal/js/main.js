@@ -119,15 +119,16 @@ class MesaDeJuego {
             return { ok: false, motivo: "Carta inválida" };
         }
 
-        // 1. Sacar carta
+        // 1. Sacar carta de la mano
         const carta = jugador.mano.splice(indiceCarta, 1)[0];
 
         // 2. Detectar caída
         const caida = this.detectarCaida(carta);
         if (caida) {
-            let puntosGanados = this.aplicarCaida(idJugador, carta, caida.indices);
 
-            // Robar carta
+            const puntosGanados = this.aplicarCaida(idJugador, carta, caida.indices);
+
+            // Robar carta tras caída
             if (this.baraja.length > 0) {
                 jugador.mano.push(this.baraja.shift());
                 this.actualizarCantosJugador(jugador);
@@ -144,20 +145,23 @@ class MesaDeJuego {
             };
         }
 
-        // 3. NO hubo caída → poner la carta EN LA MESA
+        // 3. No hubo caída → poner la carta en la mesa
         this.mesa.push(carta);
 
-        // 4. Revisar escalera DESPUÉS de poner la carta
-        const escalera = this.detectarEscaleraMesa();
+        // 4. Revisar si se formó una escalera con la mesa actual
+        const escalera = this.detectarEscaleraMesa(); // debe devolver { indices:[...] }
+
         if (escalera) {
 
-            // Puntos por escalera (ajústalo tú)
+            const indices = escalera.indices;
+
+            // 🔥 ELIMINAR SOLO LAS CARTAS DE LA ESCALERA
+            this.mesa = this.mesa.filter((_, idx) => !indices.includes(idx));
+
+            // Sumar puntos por escalera
             jugador.puntos += 3;
 
-            // Limpiar mesa
-            this.mesa = [];
-
-            // Robar carta
+            // Robar carta por jugar
             if (this.baraja.length > 0) {
                 jugador.mano.push(this.baraja.shift());
                 this.actualizarCantosJugador(jugador);
@@ -169,7 +173,7 @@ class MesaDeJuego {
                 ok: true,
                 tipo: "escalera",
                 puntos: 3,
-                mesa: []
+                mesa: [...this.mesa]
             };
         }
 
@@ -189,6 +193,8 @@ class MesaDeJuego {
             mesa: [...this.mesa]
         };
     }
+
+
 
 
     // Detectar todos los cantos posibles en una mano de 3 cartas
@@ -402,32 +408,55 @@ class MesaDeJuego {
     }
 
     detectarEscaleraMesa() {
+
         if (this.mesa.length < 3) return null;
 
-        const valores = this.mesa.map(c => c.valor).sort((a, b) => a - b);
+        // Construir lista auxiliar: valor + índice original
+        const lista = this.mesa.map((carta, idx) => ({
+            valor: carta.valor,
+            idx
+        }));
 
-        // Buscar secuencias consecutivas (5-6-7 o 10-11-12, etc)
-        let secuencia = [];
+        // Ordenar por valor (para detectar escaleras aunque en la mesa estén desordenadas)
+        lista.sort((a, b) => a.valor - b.valor);
 
-        for (let i = 0; i < valores.length; i++) {
-            if (secuencia.length === 0) {
-                secuencia.push(valores[i]);
+        let secuencia = [lista[0]];
+
+        let mejores = null;
+
+        for (let i = 1; i < lista.length; i++) {
+
+            const prev = lista[i - 1];
+            const curr = lista[i];
+
+            // ¿Continúa la escalera?
+            if (curr.valor === prev.valor + 1) {
+                secuencia.push(curr);
             } else {
-                const ultimo = secuencia[secuencia.length - 1];
-                if (valores[i] === ultimo + 1) {
-                    secuencia.push(valores[i]);
-                } else {
-                    secuencia = [valores[i]];
+                // Si rompió la escalera, evaluamos la secuencia que teníamos
+                if (secuencia.length >= 3) {
+                    mejores = [...secuencia];
                 }
-            }
-
-            if (secuencia.length >= 3) {
-                return secuencia; // 🎯 hay escalera
+                secuencia = [curr];
             }
         }
 
-        return null;
+        // Revisión final al acabar el ciclo
+        if (secuencia.length >= 3) {
+            mejores = [...secuencia];
+        }
+
+        // Nada encontrado
+        if (!mejores) return null;
+
+        // 🔥 DEVOLVER LOS ÍNDICES ORIGINALES EN LA MESA
+        return {
+            indices: mejores.map(x => x.idx),
+            valores: mejores.map(x => x.valor)
+        };
     }
+
+
 
     // Verifica si ya se acabaron las manos y la ronda puede finalizarse manualmente
     verificarFinDeRonda() {
