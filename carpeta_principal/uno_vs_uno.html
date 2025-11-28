@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CartasKeifox – Uno vs Uno</title>
+
+    <!-- CSS principal general -->
+    <link rel="stylesheet" href="carpeta_principal/css/style.css">
+
+    <!-- CSS del panel lateral de cantos -->
+    <link rel="stylesheet" href="carpeta_principal/css/cantos.css">
+    
+    <!-- CSS específico del modo uno vs uno -->
+    <link rel="stylesheet" href="carpeta_principal/css/uno_vs_uno.css">
+
+
+    <!-- (Opcional) CSS especial de reparto o mesa futura -->
+    <!-- <link rel="stylesheet" href="carpeta_principal/css/mesa.css"> -->
+</head>
+
+<body>
+
+    <!-- =============================== -->
+    <!--            TÍTULO               -->
+    <!-- =============================== -->
+    <h1 style="text-align:center; margin-bottom:10px;">
+        CartasKeifox – Modo 1 vs 1
+    </h1>
+
+    <!-- =============================== -->
+    <!--        CONTENEDOR GENERAL       -->
+    <!-- =============================== -->
+    <div id="contenedor-juego">
+
+        <!-- ===== MESA ===== -->
+        <section id="mesa" style="margin-bottom:20px;">
+            <!-- Las cartas de la mesa se renderizan desde JS -->
+        </section>
+
+        <!-- ===== JUGADORES ===== -->
+        <section id="jugadores">
+            <!-- Aquí se renderizan dinámicamente los jugadores -->
+        </section>
+
+    </div>
+
+    <!-- =============================== -->
+    <!--   PANEL LATERAL (CANTOS)        -->
+    <!-- =============================== -->
+    <div id="panel-cantos">
+        <h3>Cantos disponibles</h3>
+        <div id="cantos-lista"></div>
+    </div>
+
+    <!-- =============================== -->
+    <!--   SCRIPTS DEL MOTOR + UI        -->
+    <!-- =============================== -->
+
+    <!-- Motor principal -->
+    <script src="carpeta_principal/js/main.js"></script>
+
+    <!-- Interfaz del modo uno vs uno -->
+    <script src="carpeta_principal/js/ui_uno_vs_uno.js"></script>
+
+</body>
+</html>

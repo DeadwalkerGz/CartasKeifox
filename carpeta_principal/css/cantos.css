@@ -1,0 +1,32 @@
+#panel-cantos {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background: #0f172a;
+    padding: 20px;
+    color: white;
+    border-left: 3px solid #1e293b;
+    overflow-y: auto;
+}
+
+#panel-cantos h3 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.canto-btn {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #1e293b;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.canto-btn:hover {
+    background: #334155;
+}

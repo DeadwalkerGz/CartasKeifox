@@ -11,7 +11,9 @@ class Carta {
     constructor(palo, valor) {
         this.palo = palo;
         this.valor = valor;
-        this.imagen = `carpeta_principal/img/${palo}_${valor}.png`;
+        this.imagen = `img/${palo}_${valor}.jpeg`;
+
+
     }
 }
 
@@ -74,27 +76,30 @@ class MesaDeJuego {
     }
 
     iniciarPartida(numJugadores = 2) {
+        // Limpiar mesa y baraja
         this.baraja = [];
         this.mesa = [];
         this.estado = "repartiendo";
 
+        // Generar y mezclar baraja
         this.generarBaraja();
         this.mezclar();
 
-        // ✅ Solo crear jugadores si NO existen
-        if (this.jugadores.length === 0) {
-            for (let i = 0; i < numJugadores; i++) {
-                this.agregarJugador(`Jugador ${i + 1}`);
-            }
+        // 🔥 IMPORTANTE: limpiar la lista de jugadores SIEMPRE
+        this.jugadores = [];
+        for (let i = 0; i < numJugadores; i++) {
+            this.agregarJugador(`Jugador ${i + 1}`);
         }
 
+        // Repartir 3 cartas y detectar cantos
         this.repartir();
 
-        // El primer jugador siempre es el que sigue al repartidor
+        // Primer turno = jugador a la derecha del repartidor
         this.turnoActual = (this.repartidor + 1) % this.jugadores.length;
 
         this.estado = "turno";
     }
+
 
     // 6. Saber quién juega
     getJugadorActual() {
@@ -121,6 +126,13 @@ class MesaDeJuego {
         if (caida) {
             puntosGanados = this.aplicarCaida(idJugador, carta, caida.index);
 
+            // 🔥 ROBAR CARTA TAMBIÉN EN CAÍDA
+            if (this.baraja.length > 0) {
+                jugador.mano.push(this.baraja.shift());
+            }
+
+            this.avanzarTurno();
+
             return {
                 ok: true,
                 tipo: "caida",
@@ -130,9 +142,13 @@ class MesaDeJuego {
             };
         }
 
-
-        // Si no hay caída → solo colocar carta en la mesa
+        // Si no hay caída → colocar carta en la mesa
         this.mesa.push(carta);
+
+        // 🔥 ROBAR UNA CARTA SI TODAVÍA QUEDAN EN LA BARAJA
+        if (this.baraja.length > 0) {
+            jugador.mano.push(this.baraja.shift());
+        }
 
         // Pasar turno
         this.avanzarTurno();
@@ -143,6 +159,7 @@ class MesaDeJuego {
             carta,
             mesa: [...this.mesa]
         };
+
     }
 
     // Detectar todos los cantos posibles en una mano de 3 cartas
@@ -180,8 +197,14 @@ class MesaDeJuego {
         }
 
         // VIGÍA (2 iguales + 1 consecutiva hacia arriba o abajo)
-        if (a === b && (c === b + 1 || c === b - 1)) cantos.vigia = true;
-        if (b === c && (a === b + 1 || a === b - 1)) cantos.vigia = true;
+        // VIGÍA: par + carta consecutiva arriba o abajo
+        if (a === b && (c === b + 1 || c === b - 1)) {
+            cantos.vigia = true;
+        }
+        if (b === c && (a === b + 1 || a === b - 1)) {
+            cantos.vigia = true;
+        }
+
 
         // REGISTRO (1, 11, 12)
         if (valores.includes(1) && valores.includes(11) && valores.includes(12)) {
@@ -220,15 +243,25 @@ class MesaDeJuego {
         // PUNTOS por canto
         const tabla = {
             ronda: (mano) => {
-                const valores = mano.map(c => c.valor);
-                const iguales = valores[0] === valores[1] || valores[1] === valores[2];
-                const valorPar = iguales ? valores[1] : valores[0];
+                // Ordenar
+                const valores = mano.map(c => c.valor).sort((a, b) => a - b);
+
+                // Detectar valor del par
+                let valorPar = null;
+                if (valores[0] === valores[1]) valorPar = valores[0];
+                else if (valores[1] === valores[2]) valorPar = valores[1];
+
+                if (valorPar === null) return 0;
+
+                // Puntos según el valor
                 if (valorPar >= 1 && valorPar <= 7) return 1;
                 if (valorPar === 10) return 2;
                 if (valorPar === 11) return 3;
                 if (valorPar === 12) return 4;
+
                 return 0;
-            },
+            }
+            ,
             trivilin: () => 5,
             patrulla: () => 6,
             vigia: () => 7,

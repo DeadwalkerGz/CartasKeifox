@@ -6,24 +6,33 @@ const path = require("path");
 
 const app = express();
 
-// Cargar certificados
+// =============================
+// 🔥 SERVIR ARCHIVOS ESTÁTICOS
+// =============================
+app.use(express.static(__dirname)); // sirve index.html, uno_vs_uno.html, etc.
+app.use(express.static(path.join(__dirname, "carpeta_principal"))); // css, js, img
+
+// =============================
+// 🔒 CERTIFICADOS HTTPS
+// =============================
 const options = {
     key: fs.readFileSync(path.join(__dirname, "cert", "key.pem")),
     cert: fs.readFileSync(path.join(__dirname, "cert", "cert.pem"))
 };
 
-// Servir contenido estático dentro de "carpeta_principal"
-app.use(express.static(path.join(__dirname, "carpeta_principal")));
-
-// Ruta principal /
+// =============================
+// RUTA PRINCIPAL
+// =============================
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "carpeta_principal", "index.html"));
+    res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Puerto
+// PUERTO
 const PORT = 5500;
 
-// Iniciar servidor HTTPS
+// =============================
+// INICIAR SERVER
+// =============================
 https.createServer(options, app).listen(PORT, () => {
-    console.log(`Servidor HTTPS activo en https://localhost:${PORT}`);
+    console.log(`🔥 Servidor HTTPS activo en https://localhost:${PORT}`);
 });
