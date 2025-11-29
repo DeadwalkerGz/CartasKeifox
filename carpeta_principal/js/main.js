@@ -6,17 +6,20 @@
 const PALOS = ["corazon", "pica", "diamante", "trebol"];
 const VALORES = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
 
+// ===============================
 // Clase Carta
+// ===============================
 class Carta {
     constructor(palo, valor) {
         this.palo = palo;
         this.valor = valor;
         this.imagen = `img/${palo}_${valor}.jpeg`;
-
-
     }
 }
 
+// ===============================
+// Clase Jugador
+// ===============================
 class Jugador {
     constructor(id, nombre) {
         this.id = id;
@@ -24,13 +27,14 @@ class Jugador {
         this.mano = [];
         this.cartasRecogidas = [];
         this.puntos = 0;
-        this.cantosDisponibles = null;   // NUEVO
-        this.cantosOriginales = null;    // NUEVO (copia inmutable para reglas)
+        this.cantosDisponibles = null;   // Cantos que puede cantar aún
+        this.cantosOriginales = null;    // Cantos que ha tenido alguna vez con esta mano
     }
 }
 
-
-// Clase Mesa (estado del juego)
+// ===============================
+// Clase MesaDeJuego (estado del juego)
+// ===============================
 class MesaDeJuego {
     constructor() {
         this.baraja = [];
@@ -39,9 +43,38 @@ class MesaDeJuego {
         this.turnoActual = 0;
         this.tiempoPorTurno = 10;
         this.estado = "lobby";
-        this.repartidor = 0;  // NUEVO
+        this.repartidor = 0;  // Índice del repartidor
     }
 
+    // ---------------------------------
+    // 🔹 Utilidad: puntos por valor
+    // ---------------------------------
+    calcularPuntosPorCarta(valor) {
+        if (valor >= 1 && valor <= 7) return 1;
+        if (valor === 10) return 2;
+        if (valor === 11) return 3;
+        if (valor === 12) return 4;
+        return 0;
+    }
+
+    // ============================================
+    // 🔥 Mesa inicial sin valores repetidos
+    // ============================================
+    inicializarMesaSinRepetidos() {
+        this.mesa = [];
+
+        while (this.mesa.length < 4 && this.baraja.length > 0) {
+            const carta = this.baraja.shift();
+            const yaExiste = this.mesa.some(c => c.valor === carta.valor);
+
+            if (!yaExiste) {
+                this.mesa.push(carta);
+            } else {
+                // carta no sirve → mandarla al fondo del mazo
+                this.baraja.push(carta);
+            }
+        }
+    }
 
     // 1. Crear baraja con las 40 cartas
     generarBaraja() {
@@ -67,6 +100,7 @@ class MesaDeJuego {
         this.jugadores.push(new Jugador(id, nombre));
     }
 
+    // Repartir 3 cartas a cada jugador
     repartir() {
         for (let j of this.jugadores) {
             j.mano = this.baraja.splice(0, 3);
@@ -76,6 +110,7 @@ class MesaDeJuego {
         }
     }
 
+    // Iniciar partida
     iniciarPartida(numJugadores = 2) {
         // Limpiar mesa y baraja
         this.baraja = [];
@@ -86,7 +121,7 @@ class MesaDeJuego {
         this.generarBaraja();
         this.mezclar();
 
-        // 🔥 IMPORTANTE: limpiar la lista de jugadores SIEMPRE
+        // Limpiar y crear jugadores
         this.jugadores = [];
         for (let i = 0; i < numJugadores; i++) {
             this.agregarJugador(`Jugador ${i + 1}`);
@@ -95,96 +130,119 @@ class MesaDeJuego {
         // Repartir 3 cartas y detectar cantos
         this.repartir();
 
+        // Mesa inicial sin valores repetidos
+        this.inicializarMesaSinRepetidos();
+
         // Primer turno = jugador a la derecha del repartidor
         this.turnoActual = (this.repartidor + 1) % this.jugadores.length;
 
         this.estado = "turno";
     }
 
-
-    // 6. Saber quién juega
+    // Saber quién juega
     getJugadorActual() {
         return this.jugadores[this.turnoActual];
     }
 
+    // ============================================
+    // 🔥 Jugar una carta
+    // ============================================
     jugarCarta(idJugador, indiceCarta) {
 
+        // Validar turno
         if (idJugador !== this.turnoActual) {
             return { ok: false, motivo: "No es tu turno" };
         }
 
         const jugador = this.jugadores[idJugador];
 
+        // Validar carta
         if (indiceCarta < 0 || indiceCarta >= jugador.mano.length) {
             return { ok: false, motivo: "Carta inválida" };
         }
 
-        // 1. Sacar carta de la mano
-        const carta = jugador.mano.splice(indiceCarta, 1)[0];
+        const carta = jugador.mano[indiceCarta]; // 🔥 aún no la quitamos de la mano
 
-        // 2. Detectar caída
-        const caida = this.detectarCaida(carta);
-        if (caida) {
+        // ---------------------------------------------
+        // 🔥 Intentar detectar combo
+        // ---------------------------------------------
+        const resultado = this.detectarCaidaCadena(carta);
 
-            const puntosGanados = this.aplicarCaida(idJugador, carta, caida.indices);
+        // ❌ Combo inválido → NO permitir ni jugar la carta
+        if (resultado && resultado.invalida) {
+            return {
+                ok: false,
+                motivo: resultado.motivo || "Combo no válido."
+            };
+        }
 
-            // Robar carta tras caída
+        // ---------------------------------------------
+        // ✔ Hay combo válido
+        // ---------------------------------------------
+        if (resultado && resultado.indices) {
+
+            // Sacar la carta
+            jugador.mano.splice(indiceCarta, 1);
+
+            // Capturar cartas de la mesa, eliminando en orden descendente
+            const capturadas = resultado.indices
+                .sort((a, b) => b - a)
+                .map(i => this.mesa.splice(i, 1)[0]);
+
+            // Agregar la carta jugada
+            capturadas.push(carta);
+            jugador.cartasRecogidas.push(...capturadas);
+
+            // Puntaje
+            let puntos = this.calcularPuntosPorCarta(carta.valor);
+
+            if (this.mesa.length === 0) puntos += 4; // Bonus por limpiar mesa
+            jugador.puntos += puntos;
+
+            // Robar carta
             if (this.baraja.length > 0) {
                 jugador.mano.push(this.baraja.shift());
                 this.actualizarCantosJugador(jugador);
             }
 
+            // Avanzar turno
             this.avanzarTurno();
+
+            // Debug
+            window._ultimaJugada = {
+                tipo: "combo",
+                jugador: idJugador,
+                carta,
+                cadena: resultado.cadena
+            };
 
             return {
                 ok: true,
-                tipo: "caida",
-                carta,
-                puntos: puntosGanados,
+                tipo: "combo",
+                cadena: resultado.cadena,
+                puntos,
                 mesa: [...this.mesa]
             };
         }
 
-        // 3. No hubo caída → poner la carta en la mesa
+        // ---------------------------------------------
+        // 🔥 No hay combo → jugada normal
+        // ---------------------------------------------
+        jugador.mano.splice(indiceCarta, 1);
         this.mesa.push(carta);
 
-        // 4. Revisar si se formó una escalera con la mesa actual
-        const escalera = this.detectarEscaleraMesa(); // debe devolver { indices:[...] }
-
-        if (escalera) {
-
-            const indices = escalera.indices;
-
-            // 🔥 ELIMINAR SOLO LAS CARTAS DE LA ESCALERA
-            this.mesa = this.mesa.filter((_, idx) => !indices.includes(idx));
-
-            // Sumar puntos por escalera
-            jugador.puntos += 3;
-
-            // Robar carta por jugar
-            if (this.baraja.length > 0) {
-                jugador.mano.push(this.baraja.shift());
-                this.actualizarCantosJugador(jugador);
-            }
-
-            this.avanzarTurno();
-
-            return {
-                ok: true,
-                tipo: "escalera",
-                puntos: 3,
-                mesa: [...this.mesa]
-            };
-        }
-
-        // 5. Robar carta normal
         if (this.baraja.length > 0) {
             jugador.mano.push(this.baraja.shift());
             this.actualizarCantosJugador(jugador);
         }
 
-        // 6. Pasar turno
         this.avanzarTurno();
+
+        window._ultimaJugada = {
+            tipo: "normal",
+            jugador: idJugador,
+            carta
+        };
 
         return {
             ok: true,
@@ -195,13 +253,12 @@ class MesaDeJuego {
     }
 
 
-
-
-    // Detectar todos los cantos posibles en una mano de 3 cartas
+    // ============================================
+    // Cantos
+    // ============================================
     detectarCantos(mano) {
         // Ordenar por valor para facilitar detección
         const orden = mano.map(c => c.valor).sort((a, b) => a - b);
-
         const [a, b, c] = orden;
         const valores = orden;
 
@@ -231,15 +288,13 @@ class MesaDeJuego {
             cantos.patrulla = true;
         }
 
-        // VIGÍA (2 iguales + 1 consecutiva hacia arriba o abajo)
-        // VIGÍA: par + carta consecutiva arriba o abajo
+        // VIGÍA (par + carta consecutiva arriba o abajo)
         if (a === b && (c === b + 1 || c === b - 1)) {
             cantos.vigia = true;
         }
         if (b === c && (a === b + 1 || a === b - 1)) {
             cantos.vigia = true;
         }
-
 
         // REGISTRO (1, 11, 12)
         if (valores.includes(1) && valores.includes(11) && valores.includes(12)) {
@@ -251,7 +306,7 @@ class MesaDeJuego {
             cantos.registrico = true;
         }
 
-        // CASA CHICA (1, 11, 11) → esto solo existe si la baraja incluye dobles
+        // CASA CHICA (1, 11, 11) → solo si baraja tuviera dobles
         if (valores[0] === 1 && valores[1] === 11 && valores[2] === 11) {
             cantos.casaChica = true;
         }
@@ -268,25 +323,21 @@ class MesaDeJuego {
     actualizarCantosJugador(jugador) {
         if (!jugador) return;
 
-        // Detectar cantos con la mano actual
         const nuevos = this.detectarCantos(jugador.mano);
 
-        // Si nunca tuvo cantosDisponibles, simplemente los asignamos
         if (!jugador.cantosDisponibles) {
             jugador.cantosDisponibles = { ...nuevos };
         } else {
-            // Si ya existían, respetamos los que ya fueron cantados (false)
             for (let tipo in nuevos) {
                 if (jugador.cantosDisponibles[tipo] === false) {
-                    // Ya lo cantó antes: NO se reactiva, aunque la mano lo permita
+                    // ya lo cantó antes: NO se reactiva
                     continue;
                 }
                 jugador.cantosDisponibles[tipo] = nuevos[tipo];
             }
         }
 
-        // Actualizar cantosOriginales:
-        // representa los cantos que HA TENIDO en algún momento con esta mano
+        // Cantos que ha tenido alguna vez con esta mano
         if (!jugador.cantosOriginales) {
             jugador.cantosOriginales = { ...nuevos };
         } else {
@@ -310,28 +361,17 @@ class MesaDeJuego {
             return { ok: false, motivo: "Ese canto no es válido con su mano." };
         }
 
-        // PUNTOS por canto
+        // Tabla de puntos por canto
         const tabla = {
             ronda: (mano) => {
-                // Ordenar
                 const valores = mano.map(c => c.valor).sort((a, b) => a - b);
-
-                // Detectar valor del par
                 let valorPar = null;
                 if (valores[0] === valores[1]) valorPar = valores[0];
                 else if (valores[1] === valores[2]) valorPar = valores[1];
 
                 if (valorPar === null) return 0;
-
-                // Puntos según el valor
-                if (valorPar >= 1 && valorPar <= 7) return 1;
-                if (valorPar === 10) return 2;
-                if (valorPar === 11) return 3;
-                if (valorPar === 12) return 4;
-
-                return 0;
-            }
-            ,
+                return this.calcularPuntosPorCarta(valorPar);
+            },
             trivilin: () => 5,
             patrulla: () => 6,
             vigia: () => 7,
@@ -355,117 +395,112 @@ class MesaDeJuego {
         };
     }
 
-    // Detectar si hay caída en cualquier parte de la mesa
-    detectarCaida(cartaJug) {
-        // Buscar todas las cartas con el mismo valor
-        const indices = [];
+    detectarCaidaCadena(cartaJug) {
+        const V = cartaJug.valor;
+        const valoresMesa = this.mesa.map(c => c.valor);
 
-        for (let i = 0; i < this.mesa.length; i++) {
-            if (this.mesa[i].valor === cartaJug.valor) {
-                indices.push(i);
-            }
+        // Si no está el mismo número en mesa → no es combo
+        if (!valoresMesa.includes(V)) return null;
+
+        // --- Construir escalera hacia abajo ---
+        let down = [];
+        let d = V - 1;
+        while (valoresMesa.includes(d)) {
+            down.unshift(d);
+            d--;
         }
 
-        if (indices.length === 0) return null;
-
-        return { indices };
-    }
-
-    // Aplicar caída: recoger cartas y calcular puntos
-    aplicarCaida(idJugador, cartaJug, indices) {
-        const jugador = this.jugadores[idJugador];
-
-        // Tomar las cartas exactas que coincidieron
-        const recogidas = indices.map(i => this.mesa[i]);
-
-        // Eliminar de la mesa las cartas recogidas SIN romper el orden
-        this.mesa = this.mesa.filter((_, idx) => !indices.includes(idx));
-
-        // Añadir tu carta a las recogidas
-        recogidas.push(cartaJug);
-
-        // Guardar todo en el jugador
-        jugador.cartasRecogidas.push(...recogidas);
-
-        // ============================
-        // PUNTOS (misma regla anterior)
-        // ============================
-        let puntos = 0;
-
-        if (cartaJug.valor >= 1 && cartaJug.valor <= 7) puntos += 1;
-        else if (cartaJug.valor === 10) puntos += 2;
-        else if (cartaJug.valor === 11) puntos += 3;
-        else if (cartaJug.valor === 12) puntos += 4;
-
-        // BONUS de mesa limpia
-        if (this.mesa.length === 0) {
-            puntos += 4;
+        // --- Construir escalera hacia arriba ---
+        let up = [];
+        let u = V + 1;
+        while (valoresMesa.includes(u)) {
+            up.push(u);
+            u++;
         }
 
-        jugador.puntos += puntos;
+        const cadenaCompleta = [...down, V, ...up];
 
-        return puntos;
-    }
+        // Menor real de la escalera
+        const menorEscalera = down.length > 0 ? down[0] : V;
 
-    detectarEscaleraMesa() {
+        // =======================================
+        // 1) Si juega el menor → toma TODA la cadena
+        // =======================================
+        if (V === menorEscalera) {
 
-        if (this.mesa.length < 3) return null;
+            // Capturar SOLO UNA carta por cada valor de la escalera
+            let valoresNecesarios = [...cadenaCompleta];
+            const indices = [];
 
-        // Construir lista auxiliar: valor + índice original
-        const lista = this.mesa.map((carta, idx) => ({
-            valor: carta.valor,
-            idx
-        }));
-
-        // Ordenar por valor (para detectar escaleras aunque en la mesa estén desordenadas)
-        lista.sort((a, b) => a.valor - b.valor);
-
-        let secuencia = [lista[0]];
-
-        let mejores = null;
-
-        for (let i = 1; i < lista.length; i++) {
-
-            const prev = lista[i - 1];
-            const curr = lista[i];
-
-            // ¿Continúa la escalera?
-            if (curr.valor === prev.valor + 1) {
-                secuencia.push(curr);
-            } else {
-                // Si rompió la escalera, evaluamos la secuencia que teníamos
-                if (secuencia.length >= 3) {
-                    mejores = [...secuencia];
+            this.mesa.forEach((c, idx) => {
+                const pos = valoresNecesarios.indexOf(c.valor);
+                if (pos !== -1) {
+                    indices.push(idx);
+                    valoresNecesarios.splice(pos, 1);
                 }
-                secuencia = [curr];
+            });
+
+            if (indices.length + 1 < 3) return { invalida: true };
+
+            return {
+                indices,
+                cadena: cadenaCompleta
+            };
+        }
+
+        // =======================================
+        // 2) No es el menor → toma solo hacia arriba
+        // =======================================
+        const cadenaArriba = [V, ...up];
+
+        // Capturar SOLO UNA carta por valor
+        let valoresNecesarios = [...cadenaArriba];
+        const indices2 = [];
+
+        this.mesa.forEach((c, idx) => {
+            const pos = valoresNecesarios.indexOf(c.valor);
+            if (pos !== -1) {
+                indices2.push(idx);
+                valoresNecesarios.splice(pos, 1); // elimina una coincidencia
             }
+        });
+
+        const total = indices2.length + 1;
+
+        // ❌ Si no es combo de 3 cartas → NO permitir
+        if (total < 3) {
+            return { invalida: true, motivo: "No puedes romper la escalera si no formas combo válido." };
         }
 
-        // Revisión final al acabar el ciclo
-        if (secuencia.length >= 3) {
-            mejores = [...secuencia];
-        }
-
-        // Nada encontrado
-        if (!mejores) return null;
-
-        // 🔥 DEVOLVER LOS ÍNDICES ORIGINALES EN LA MESA
         return {
-            indices: mejores.map(x => x.idx),
-            valores: mejores.map(x => x.valor)
+            indices: indices2,
+            cadena: cadenaArriba
         };
     }
 
+    // Aplicar caída (si quisieras reutilizar la lógica fuera de jugarCarta)
+    aplicarCaida(idJugador, cartaJug, indices) {
+        const jugador = this.jugadores[idJugador];
 
+        const recogidas = indices.map(i => this.mesa[i]);
+        this.mesa = this.mesa.filter((_, idx) => !indices.includes(idx));
 
-    // Verifica si ya se acabaron las manos y la ronda puede finalizarse manualmente
+        recogidas.push(cartaJug);
+        jugador.cartasRecogidas.push(...recogidas);
+
+        let puntos = this.calcularPuntosPorCarta(cartaJug.valor);
+        if (this.mesa.length === 0) puntos += 4;
+
+        jugador.puntos += puntos;
+        return puntos;
+    }
+
+    // ============================================
+    // Ronda y partida
+    // ============================================
     verificarFinDeRonda() {
-        // Condición principal: todos los jugadores se quedaron sin cartas
         const todosSinCartas = this.jugadores.every(j => j.mano.length === 0);
-
-        // Y la baraja ya no tiene más cartas
         const noHayMazo = this.baraja.length === 0;
-
         return todosSinCartas && noHayMazo;
     }
 
@@ -475,12 +510,10 @@ class MesaDeJuego {
         }
 
         const numJug = this.jugadores.length;
-
         let limites = { 2: 20, 3: 13, 4: 10 };
 
         this.jugadores.forEach((j, index) => {
             let limite = limites[numJug];
-
             if (numJug === 3 && index === this.repartidor) {
                 limite = 14;
             }
@@ -493,7 +526,7 @@ class MesaDeJuego {
 
         this.estado = "fin_ronda";
 
-        // NUEVO: rotar repartidor
+        // Rotar repartidor
         this.repartidor = (this.repartidor + 1) % numJug;
 
         return {
@@ -514,15 +547,12 @@ class MesaDeJuego {
             return { ok: false, motivo: "No hay jugadores en la mesa." };
         }
 
-        // Limpiar mesa y baraja
         this.mesa = [];
         this.baraja = [];
 
-        // Regenerar y mezclar baraja
         this.generarBaraja();
         this.mezclar();
 
-        // Reset de manos, cantos y cartas recogidas (NO de puntos)
         this.jugadores.forEach(j => {
             j.mano = [];
             j.cartasRecogidas = [];
@@ -530,12 +560,9 @@ class MesaDeJuego {
             j.cantosOriginales = null;
         });
 
-        // Repartir nueva mano y detectar cantos
         this.repartir();
 
-        // El primer jugador de la nueva ronda es el que sigue al repartidor actual
         this.turnoActual = (this.repartidor + 1) % numJug;
-
         this.estado = "turno";
 
         return {
@@ -544,7 +571,6 @@ class MesaDeJuego {
             turnoInicial: this.turnoActual
         };
     }
-
 
     verificarFinDePartida() {
         // Victoria por 24 puntos exactos
@@ -555,7 +581,7 @@ class MesaDeJuego {
             }
         }
 
-        // Trivilín de 12 mata partida (usa cantosOriginales para que no se pierda al cantar)
+        // Trivilín de 12 mata partida
         for (let j of this.jugadores) {
             if (j.cantosOriginales && j.cantosOriginales.trivilin) {
                 const valores = j.mano.map(c => c.valor).sort((a, b) => a - b);
@@ -566,18 +592,12 @@ class MesaDeJuego {
             }
         }
 
-
-        // Empate por cantos iguales → desempate con carta mayor
-        // (regla real: gana el que esté más cerca del repartidor en sentido derecho)
-        // Lo dejamos pendiente hasta que tengamos el “repartidor” definido en motor.
-
         return { ok: false };
     }
-    // Devuelve el índice de jugador ganador entre candidatos
-    // siguiendo la regla: gana el más cercano al repartidor en sentido derecho
+
+    // Desempate por repartidor
     resolverEmpatePorRepartidor(candidatosIndices) {
         const n = this.jugadores.length;
-        // Empezamos a contar desde el jugador a la derecha del repartidor
         for (let offset = 1; offset <= n; offset++) {
             const idx = (this.repartidor + offset) % n;
             if (candidatosIndices.includes(idx)) {
@@ -587,7 +607,7 @@ class MesaDeJuego {
         return null;
     }
 
-    // 8. Pasar al siguiente jugador
+    // Pasar al siguiente jugador
     avanzarTurno() {
         this.turnoActual = (this.turnoActual + 1) % this.jugadores.length;
     }
