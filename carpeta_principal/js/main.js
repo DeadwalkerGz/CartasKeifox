@@ -149,26 +149,30 @@ class MesaDeJuego {
     // ============================================
     jugarCarta(idJugador, indiceCarta) {
 
-        // Validar turno
+        // ===========================
+        // 🔹 Validar turno
+        // ===========================
         if (idJugador !== this.turnoActual) {
             return { ok: false, motivo: "No es tu turno" };
         }
 
         const jugador = this.jugadores[idJugador];
 
-        // Validar carta
+        // ===========================
+        // 🔹 Validar carta existente
+        // ===========================
         if (indiceCarta < 0 || indiceCarta >= jugador.mano.length) {
             return { ok: false, motivo: "Carta inválida" };
         }
 
-        const carta = jugador.mano[indiceCarta]; // 🔥 aún no la quitamos de la mano
+        const carta = jugador.mano[indiceCarta]; // AÚN NO la sacamos
 
-        // ---------------------------------------------
-        // 🔥 Intentar detectar combo
-        // ---------------------------------------------
+        // ===========================
+        // 🔥 Detectar combo
+        // ===========================
         const resultado = this.detectarCaidaCadena(carta);
 
-        // ❌ Combo inválido → NO permitir ni jugar la carta
+        // ❌ Combo inválido → NO se juega la carta
         if (resultado && resultado.invalida) {
             return {
                 ok: false,
@@ -176,39 +180,45 @@ class MesaDeJuego {
             };
         }
 
-        // ---------------------------------------------
-        // ✔ Hay combo válido
-        // ---------------------------------------------
+        // ===========================
+        // ✔ COMBO VÁLIDO
+        // ===========================
         if (resultado && resultado.indices) {
 
-            // Sacar la carta
+            // Quitar la carta de la mano
             jugador.mano.splice(indiceCarta, 1);
 
-            // Capturar cartas de la mesa, eliminando en orden descendente
+            // Capturar solo las cartas obligatorias
             const capturadas = resultado.indices
                 .sort((a, b) => b - a)
                 .map(i => this.mesa.splice(i, 1)[0]);
 
-            // Agregar la carta jugada
+            // Agregar carta jugada
             capturadas.push(carta);
             jugador.cartasRecogidas.push(...capturadas);
 
             // Puntaje
             let puntos = this.calcularPuntosPorCarta(carta.valor);
+            if (this.mesa.length === 0) puntos += 4; // Bonus
 
-            if (this.mesa.length === 0) puntos += 4; // Bonus por limpiar mesa
             jugador.puntos += puntos;
-
-            // Robar carta
-            if (this.baraja.length > 0) {
-                jugador.mano.push(this.baraja.shift());
-                this.actualizarCantosJugador(jugador);
-            }
 
             // Avanzar turno
             this.avanzarTurno();
 
-            // Debug
+            // ===========================
+            // 🔥 NUEVA LÓGICA
+            // Repartir nueva mano si ambos están en 0
+            // Solo si hay 6 cartas exactas o más
+            // ===========================
+            if (this.jugadores.every(j => j.mano.length === 0) && this.baraja.length >= 6) {
+
+                for (let j of this.jugadores) {
+                    j.mano = this.baraja.splice(0, 3);
+                    this.actualizarCantosJugador(j);
+                }
+            }
+
             window._ultimaJugada = {
                 tipo: "combo",
                 jugador: idJugador,
@@ -225,18 +235,25 @@ class MesaDeJuego {
             };
         }
 
-        // ---------------------------------------------
-        // 🔥 No hay combo → jugada normal
-        // ---------------------------------------------
-        jugador.mano.splice(indiceCarta, 1);
-        this.mesa.push(carta);
+        // ===========================
+        // 🔹 JUGADA NORMAL
+        // ===========================
+        jugador.mano.splice(indiceCarta, 1); // quitar carta
+        this.mesa.push(carta); // colocar en mesa
 
-        if (this.baraja.length > 0) {
-            jugador.mano.push(this.baraja.shift());
-            this.actualizarCantosJugador(jugador);
-        }
-
+        // Avanzar turno
         this.avanzarTurno();
+
+        // ===========================
+        // 🔥 Nueva lógica para repartir
+        // ===========================
+        if (this.jugadores.every(j => j.mano.length === 0) && this.baraja.length >= 6) {
+
+            for (let j of this.jugadores) {
+                j.mano = this.baraja.splice(0, 3);
+                this.actualizarCantosJugador(j);
+            }
+        }
 
         window._ultimaJugada = {
             tipo: "normal",
@@ -251,6 +268,9 @@ class MesaDeJuego {
             mesa: [...this.mesa]
         };
     }
+
+
+
 
 
     // ============================================
@@ -440,7 +460,18 @@ class MesaDeJuego {
                 }
             });
 
-            if (indices.length + 1 < 3) return { invalida: true };
+            const hayEscalera = (down.length > 0 || up.length > 0);
+
+            // Si es escalera → mínimo 3
+            if (hayEscalera && indices.length + 1 < 3) {
+                return { invalida: true };
+            }
+
+            // Si NO es escalera → permitir PAR
+            if (!hayEscalera && indices.length + 1 < 2) {
+                return { invalida: true };
+            }
+
 
             return {
                 indices,
@@ -467,10 +498,19 @@ class MesaDeJuego {
 
         const total = indices2.length + 1;
 
-        // ❌ Si no es combo de 3 cartas → NO permitir
-        if (total < 3) {
+        // 🔥 Permitir PAR (2 cartas) si NO hay escalera
+        const hayEscalera = (down.length > 0 || up.length > 0);
+
+        // Si hay escalera → mínimo 3 cartas
+        if (hayEscalera && total < 3) {
             return { invalida: true, motivo: "No puedes romper la escalera si no formas combo válido." };
         }
+
+        // Si NO hay escalera → permitir PAR (total = 2)
+        if (!hayEscalera && total < 2) {
+            return { invalida: true };
+        }
+
 
         return {
             indices: indices2,
