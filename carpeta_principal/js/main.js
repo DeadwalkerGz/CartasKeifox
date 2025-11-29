@@ -279,18 +279,33 @@ class MesaDeJuego {
         const V = carta.valor;
         const valores = this.mesa.map(c => c.valor);
 
+        // Si no hay mismo valor en mesa, no hay combo
         if (!valores.includes(V)) return null;
 
         let down = [], up = [];
 
-        for (let d = V - 1; valores.includes(d); d--) down.unshift(d);
-        for (let u = V + 1; valores.includes(u); u++) up.push(u);
+        // Valores hacia abajo
+        for (let d = V - 1; valores.includes(d); d--) {
+            down.unshift(d);
+        }
 
+        // Valores hacia arriba
+        for (let u = V + 1; valores.includes(u); u++) {
+            up.push(u);
+        }
+
+        // Cadena completa alrededor de V
         const cadena = [...down, V, ...up];
-        const menor = down.length ? down[0] : V;
-        const hayEsc = down.length || up.length;
 
-        // --- Si juega el menor ---
+        // Escalera real = 3 o más consecutivos
+        const esEscaleraReal = cadena.length >= 3;
+
+        // El menor solo importa si hay escalera real
+        const menor = esEscaleraReal ? cadena[0] : V;
+
+        // ============================
+        // 1) Si juega el menor
+        // ============================
         if (V === menor) {
             let necesarios = [...cadena];
             const idxs = [];
@@ -303,14 +318,27 @@ class MesaDeJuego {
                 }
             });
 
-            const total = idxs.length + 1;
-            if (hayEsc && total < 3) return { invalida: true };
-            if (!hayEsc && total < 2) return { invalida: true };
+            const total = idxs.length + 1; // +1 por la carta jugada
 
-            return { indices: idxs, cadena };
+            // Si es escalera real → mínimo 3 cartas
+            if (esEscaleraReal && total < 3) {
+                return { invalida: true };
+            }
+
+            // Si NO es escalera (es par) → mínimo 2 cartas
+            if (!esEscaleraReal && total < 2) {
+                return { invalida: true };
+            }
+
+            return {
+                indices: idxs,
+                cadena
+            };
         }
 
-        // --- No es el menor ---
+        // ============================
+        // 2) No es el menor
+        // ============================
         const arriba = [V, ...up];
         let necesarios = [...arriba];
         const idxs = [];
@@ -325,14 +353,20 @@ class MesaDeJuego {
 
         const total = idxs.length + 1;
 
-        if (hayEsc && total < 3)
-            return { invalida: true, motivo: "No puedes romper la escalera si no formas combo válido." };
-
-        if (!hayEsc && total < 2)
+        // ✅ Regla simple aquí:
+        // Siempre que al menos haya una carta en mesa que pueda formar combo
+        // (par o algo con cartas hacia arriba), se permite si total >= 2.
+        if (total < 2) {
             return { invalida: true };
+        }
 
-        return { indices: idxs, cadena: arriba };
+        return {
+            indices: idxs,
+            cadena: arriba
+        };
+
     }
+
 
     // ============================================
     // Ronda y Partida

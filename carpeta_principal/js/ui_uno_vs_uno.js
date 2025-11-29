@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const manoDiv = document.getElementById(`mano_${idJ}`);
 
-            jugador.mano.forEach((carta, idC) => {
+            jugador.mano.forEach((carta) => {
                 const cartaEl = document.createElement("div");
                 cartaEl.classList.add("carta");
 
@@ -63,13 +63,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 cartaEl.appendChild(img);
 
                 if (idJ === mesa.turnoActual) {
-                    cartaEl.addEventListener("click", () => jugarCarta(idJ, idC));
+                    cartaEl.addEventListener("click", () => {
+                        const realIndex = jugador.mano.indexOf(carta);
+                        jugarCarta(idJ, realIndex);
+                    });
                 } else {
                     cartaEl.classList.add("disabled");
                 }
 
                 manoDiv.appendChild(cartaEl);
             });
+
         });
     }
 
@@ -97,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderBaraja() {
         contadorBarajaEl.textContent = `Cartas en el mazo: ${mesa.baraja.length}`;
     }
-    
+
     // ====== ACCIÓN: CANTAR ======
     function cantar(idJugador, tipo) {
         const res = mesa.cantar(idJugador, tipo);
@@ -145,39 +149,39 @@ document.addEventListener("DOMContentLoaded", () => {
         renderDebug();
     }
     function renderDebug() {
-    const out = document.getElementById("debug-output");
+        const out = document.getElementById("debug-output");
 
-    const data = {
-        turnoActual: mesa.turnoActual,
-        estado: mesa.estado,
-        repartidor: mesa.repartidor,
-        barajaRestante: mesa.baraja.length,
+        const data = {
+            turnoActual: mesa.turnoActual,
+            estado: mesa.estado,
+            repartidor: mesa.repartidor,
+            barajaRestante: mesa.baraja.length,
 
-        mesaValores: mesa.mesa.map(c => ({
-            palo: c.palo,
-            valor: c.valor,
-            img: c.imagen
-        })),
-
-        jugadores: mesa.jugadores.map(j => ({
-            id: j.id,
-            nombre: j.nombre,
-            puntos: j.puntos,
-            mano: j.mano.map(c => ({
+            mesaValores: mesa.mesa.map(c => ({
                 palo: c.palo,
                 valor: c.valor,
                 img: c.imagen
             })),
-            cantosDisponibles: j.cantosDisponibles,
-            cantosOriginales: j.cantosOriginales,
-            recogidas: j.cartasRecogidas.length
-        })),
 
-        ultimaJugada: window._ultimaJugada || null
-    };
+            jugadores: mesa.jugadores.map(j => ({
+                id: j.id,
+                nombre: j.nombre,
+                puntos: j.puntos,
+                mano: j.mano.map(c => ({
+                    palo: c.palo,
+                    valor: c.valor,
+                    img: c.imagen
+                })),
+                cantosDisponibles: j.cantosDisponibles,
+                cantosOriginales: j.cantosOriginales,
+                recogidas: j.cartasRecogidas.length
+            })),
 
-    out.textContent = JSON.stringify(data, null, 2);
-}
+            ultimaJugada: window._ultimaJugada || null
+        };
+
+        out.textContent = JSON.stringify(data, null, 2);
+    }
 
 
     // ====== INICIAR PARTIDA ======
